@@ -1,0 +1,39 @@
+closest = math.huge;
+function Update(I)
+ local target = I:GetTargetInfo(0,0).Position;
+ local vel = I:GetTargetInfo(0,0).Velocity;
+ local controllers = I:GetLuaTransceiverCount();
+ for j = 0, controllers, 1
+ do
+  local missiles = I:GetLuaControlledMissileCount(j);
+  for i = 0, missiles, 1
+  do
+   I:Log("missile: " .. j .. " " .. i);
+   local pos1 = I:GetLuaControlledMissileInfo(j,i).Position;
+   local dist = Vector3.Distance(pos1,target);
+   local count = I:GetLuaControlledMissileCount(j) + 0;
+   local valid = I:GetLuaControlledMissileInfo(j,i).Valid;
+   local mvel = I:GetLuaControlledMissileInfo(j,i).Velocity;
+   local mcombined = mvel + pos1;
+   local rvel = mvel - vel;
+   local impact = dist/rvel.magnitude;
+   closest = math.min(closest,dist)
+  if (valid==false) then
+   closest = math.huge
+  end
+  local combined = vel + target;
+  local veldis = Vector3.Distance(combined,target);
+  local aim = Vector3.Lerp(target,combined,math.sqrt(impact));
+  I:SetLuaControlledMissileAimPoint(j,i,aim.x,aim.y,aim.z);
+  -- if (dist < 0) then
+   -- I:DetonateLuaControlledMissile(j,i);
+  -- end
+  if (valid) then
+  I:Log("rvel: " .. rvel.magnitude);
+  I:Log("eta: " .. impact)
+  I:LogToHud("eta: " .. impact)
+  I:LogToHud("rvel: " .. rvel.magnitude)
+  end
+  end
+ end
+end

@@ -1,0 +1,154 @@
+speed = 1
+timer = 0
+timeralt = 0
+moverange = 60
+truemax = 20
+stridemin = 360
+stridemax = -360
+feet = {}
+feetheight = {}
+shoulder = {}
+shoulderheight = {}
+footnum = 1;
+leglength = 34
+timeset = false;
+timesetalt = false;
+grounded = false;
+groundedalt = false;
+foottime = truemax;
+init = false
+
+minlimit = -0.16
+maxlimit = 0.5
+
+function Update(I)
+if (init == false) then
+for i = 0, I:GetAllSubconstructsCount()+1, 1 do
+  local current = I:GetSubConstructChildIdentifier(0,i)
+  --I:Log(i .. " " .. current)
+  if (I:IsSubConstructOnHull(current)) then
+  --I:Log("onhull =" .. i .. " parent = " .. I:GetParent(I:GetSubConstructChildIdentifier(0,i)))
+  local hip = current
+  shoulder[footnum] = hip;
+  --I:Log("hip = " .. current .. " parent = " .. I:GetParent(I:GetSubConstructChildIdentifier(hip,0)))
+  --[[
+  local leg = I:GetSubConstructChildIdentifier(hip,1);
+  --I:Log("leg = " .. leg .. " parent = " .. I:GetParent(I:GetSubConstructChildIdentifier(leg,0)))
+  local leg2 = I:GetSubConstructChildIdentifier(leg,0);
+  --I:Log("leg2 = " .. leg2)
+  local foot = I:GetSubConstructChildIdentifier(leg2,0);
+  --]]
+  local foot = I:GetSubConstructChildIdentifier(hip,0);
+  --I:Log("foot " .. foot);
+  feet[footnum] = foot;
+  I:Log("feet[" .. footnum .. "] " .. feet[footnum] .. " valid = " .. tostring(I:GetSubConstructInfo(feet[footnum])));
+  footnum = footnum + 1
+ end 
+end
+init = true;
+end
+ --I:Log("total="..I:GetAllSubconstructsCount())
+ --I:Log("feetdone")
+ --I:Log("foot= " .. tostring(feet[1]))
+ 
+ --I:Log("feet " .. #feet)
+ for i = 1,4,1 do
+  local footinfo = I:GetSubConstructInfo(feet[i]).Position
+  local shoulderinfo = I:GetSubConstructInfo(shoulder[i]).Position
+  --I:Log("ALT " .. I:GetTerrainAltitudeForPosition(footinfo.x,footinfo.y,footinfo.z))
+  feetheight[i] = I:GetTerrainAltitudeForPosition(footinfo.x,footinfo.y,footinfo.z)
+  shoulderheight[i] = I:GetTerrainAltitudeForPosition(shoulderinfo.x,shoulderinfo.y,shoulderinfo.z)
+  --I:Log(feetheight[i])
+ end
+ I:AddPropulsionRequest(6,I:GetPropulsionRequest(0))
+ local forwardcombined = I:GetPropulsionRequest(6)
+ if (forwardcombined > 0) then
+  speed = math.max(0.3,1 - forwardcombined);
+ elseif (forwardcombined < 0) then
+  speed = math.min(-0.3,(1 + forwardcombined) * -1);
+ end
+ timer = (I:GetGameTime() % (truemax * speed)) * truemax/(speed * truemax);
+ timeralt = ((I:GetGameTime()+(truemax * speed)/2 ) % (truemax * speed)) * truemax/(speed * truemax);
+ local difference = timer - timeralt
+ local stride = ((truemax-timer) / truemax);
+ local leglift = -45
+ local frontlift = 0;
+ frontlift = (I:GetTerrainAltitudeForLocalPosition(0,0,10) - I:GetTerrainAltitudeForLocalPosition(0,0,0)) 
+ if (speed > 0) then
+  moverange = 120
+ else
+  moverange = 90
+ end
+ stridelen = stride * moverange;
+ local extenddef = math.min(leglength,(truemax-timer*2) / truemax)));
+ local extend = extenddef;
+ local topextendrot = math.acos((extend/2)/(leglength/2)) * 180/math.pi;
+ local midextendrot = 180 - (90 - topextendrot) * 2;
+ I:Log("1 " .. extend .. " " .. topextendrot .. " " .. midextendrot);
+ local stridelen = stride * moverange;
+ stridemin = math.min(stridemin,stridelen - 45)
+ stridemax = math.max(stridemax,stridelen - 45)
+ if (speed > 0) then
+  ---[[
+  local dif = I:GetSubConstructInfo(shoulder[3]).Position.y - shoulderheight[3]
+  extend = math.min(extenddef,dif);
+  --I:Log("extend = " .. extend)
+  topextendrot = math.acos((extend/2)/(leglength/2)) * 180/math.pi;
+  midextendrot = 180 - (90 - topextendrot) * 2;
+  --I:Log("deg = " .. 90 .. " output = " .. SpinDegree(90))
+  I:RequestCustomAxis("FLT",math.max(minlimit,math.min(maxlimit,SpinDegree((stridelen-moverange/2) + topextendrot))));
+  topextendrot = math.acos((extend/2)/(leglength/2)) * 180/math.pi;
+  midextendrot = 180 - (90 - topextendrot) * 2;
+  I:RequestCustomAxis("BRT",math.max(minlimit,math.min(maxlimit,SpinDegree((stridelen-moverange/2) + topextendrot))));
+  --]]
+  --I:SetSpinBlockRotationAngle(shoulder[1],180);
+  I:RequestCustomAxis("BRM",SpinDegree(-midextendrot));
+  I:RequestCustomAxis("FLM",SpinDegree(-midextendrot));
+ else
+  I:RequestCustomAxis("FLT",0);
+  I:RequestCustomAxis("BRT",0);
+  I:RequestCustomAxis("FLM",0);
+  I:RequestCustomAxis("BRM",0);
+ end
+ stride = ((truemax-timeralt) / truemax);
+ -- stride = ((truemax-timer) / truemax);
+ stridelen = stride * moverange;
+ local extenddef = math.min(leglength,leglength/2 + (leglength/2 - (leglength/2 * ((truemax-timeralt*2) / truemax))));
+ I:Log("2 " .. extend .. " " .. topextendrot .. " " .. midextendrot);
+
+ topextendrot = math.acos((extend/2)/(leglength/2)) * 180/math.pi;
+ midextendrot = 180 - (90 - topextendrot) * 2;
+ if (speed > 0) then
+  ---[[
+  local dif = I:GetSubConstructInfo(shoulder[4]).Position.y - shoulderheight[4]
+  extend = math.min(extenddef,dif);
+  topextendrot = math.acos((extend/2)/(leglength/2)) * 180/math.pi;
+  midextendrot = 180 - (90 - topextendrot) * 2;
+  I:RequestCustomAxis("BLT",math.max(minlimit,math.min(maxlimit,SpinDegree((stridelen-moverange/2) + topextendrot))));
+  --]]
+  --I:SetSpinBlockRotationAngle(shoulder[4],180);
+  ---[[
+  dif = I:GetSubConstructInfo(shoulder[2]).Position.y - shoulderheight[2]
+  extend = math.min(extenddef,dif);
+  topextendrot = math.acos((extend/2)/(leglength/2)) * 180/math.pi;
+  midextendrot = 180 - (90 - topextendrot) * 2;
+  I:RequestCustomAxis("FRT",math.max(minlimit,math.min(maxlimit,SpinDegree((stridelen-moverange/2) + topextendrot))));
+  --]]
+  I:RequestCustomAxis("BLM",SpinDegree(-midextendrot));
+  I:RequestCustomAxis("FRM",SpinDegree(-midextendrot));
+ else
+  I:RequestCustomAxis("BLT",0);
+  I:RequestCustomAxis("FRT",0);
+  I:RequestCustomAxis("BLM",0);
+  I:RequestCustomAxis("FRM",0);
+ end
+ -- I:Log("max = " .. truemax * speed .. " time: " .. timer .. " alttime= " .. timeralt);
+ -- I:Log("stridemax = " .. stridemax .. " stridemin = " .. stridemin)
+ --I:Log("slope = " .. frontlift .. " stride: " .. -(stridelen/2))
+end
+function SpinDegree(deg)
+ return 1/180 * deg
+end
+function getstride(stride,length)
+ return 1/180 * deg
+end
